@@ -3,4 +3,5 @@ psycopg2-binary==2.9.3
 pydantic==1.9.1
 fastapi==0.75.1
 uvicorn==0.16.0
+pandas==1.4.2
 jupyterlab
