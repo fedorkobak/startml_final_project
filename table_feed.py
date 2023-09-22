@@ -5,6 +5,7 @@ from sqlalchemy import (
     ForeignKey,
     TIMESTAMP
 )
+from sqlalchemy.orm import relationship
 
 from database import (
     Base,
@@ -22,11 +23,15 @@ class Feed(Base):
         ForeignKey("user.id"),
         primary_key=True,
     )
+    user = relationship(User)
+    
     post_id = Column(
         Integer,
         ForeignKey("post.id"),
         primary_key=True,
     )
+    post = relationship(Post)
+    
     action= Column(String)
     time = Column(TIMESTAMP)
 
