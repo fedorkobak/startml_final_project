@@ -1,4 +1,7 @@
-from sqlalchemy import desc
+from sqlalchemy import (
+    desc,
+    func
+)
 from sqlalchemy.orm import Session
 from fastapi import (
     FastAPI, 
@@ -59,6 +62,18 @@ def get_feed_by_post(id:int, limit = 10, db : Session = Depends(get_db)):
         db.query(Feed).
         filter(Feed.post_id == id).
         order_by(desc(Feed.time)).
+        limit(limit).
+        all()
+    )
+
+@app.get("/post/recommendations/", response_model = List[PostGet])
+def get_recommendations(id:int, limit = 10, db : Session = Depends(get_db)):
+    return (
+        db.query(Post).
+        join(Feed).
+        filter(Feed.action == "like").
+        group_by(Post.id).
+        order_by(desc(func.count())).
         limit(limit).
         all()
     )
