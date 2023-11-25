@@ -1,5 +1,5 @@
 venv
 *__pycache__*
-*.ipyb_checkpoints*
+*.ipynb_checkpoints/*
 .env
 user_data.parquet
