@@ -15,4 +15,5 @@ category-encoders==2.5.0
 loguru==0.6.0
 implicit==0.5.2
 lightfm==1.17
+pyarrow==12.0.1
 jupyterlab
