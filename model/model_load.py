@@ -1,4 +1,5 @@
 import os
+import pickle
 
 def get_model_path(path: str) -> str:
     if os.environ.get("IS_LMS") == "1":
@@ -8,5 +9,6 @@ def get_model_path(path: str) -> str:
     return MODEL_PATH
 
 def load_models():
-    model_path = get_model_path("/my/super/path")
-    model = pickle.load(model_path)
+    model_path = get_model_path("model.pck")
+    model = pickle.load(open(model_path,"rb"))
+    return model
