@@ -1,3 +1,7 @@
+import pickle
+import numpy as np
+import pandas as pd
+from datetime import datetime
 from sqlalchemy import (
     desc,
     func
@@ -15,7 +19,7 @@ from schema import (
     PostGet,
     FeedGet
 )
-from database import SessionLocal
+from database import SessionLocal, engine
 from table_user import User
 from table_post import Post
 from table_feed import Feed
@@ -28,7 +32,7 @@ def get_db():
     '''
     with SessionLocal() as db:
         return db
-
+    
 @app.get("/user/{id}", response_model=UserGet)
 def get_user(id:int, db: Session = Depends(get_db)):
     '''
@@ -123,17 +127,36 @@ def get_feeds_by_post(id:int, limit = 10, db : Session = Depends(get_db)):
         all()
     )
 
+
+# This is loading precomputed data about the post text.
+# For all posts performed tfidf transformation.
+# ORM doesn't used here because sometimes list of used
+# tfidf features can be changed.
+post_data = pd.read_sql(
+    "SELECT * FROM public.kobfedsur_post_features_lesson_22;",
+    con = engine,
+    index_col= "post_id"
+)
+post_data.index.name = "id"
+# this is the model of the project
+model = pickle.load(open("model/model.pck","rb"))
+
 @app.get("/post/recommendations/", response_model = List[PostGet])
-def get_recommendations(id:int, limit = 10, db : Session = Depends(get_db)):
+def get_recommendations(
+        id:int, 
+        time: datetime,
+        limit:int = 10, db : Session = Depends(get_db)
+    )-> List[PostGet]:
     '''
-    Aparently it's a plug for model results. 
-    But at the moment it returns some number 
-    of the most popular (by likes) posts.
+    Calls a model that returns best recommendations 
+    for the user who has passed.
 
     Parameters
     --------------
     id : int
         id of the user?;
+    time : datetime
+        when user asks information;
     limit : int
         how many posts to show (if any).
 
@@ -141,12 +164,35 @@ def get_recommendations(id:int, limit = 10, db : Session = Depends(get_db)):
     --------------
     List of posts.
     '''
+    user = db.query(User).filter(User.id == id).one_or_none()
+    
+    model_input = post_data.drop("text", axis = 1).copy()
+    model_input["age"] = user.age
+    model_input["country"] = user.country
+    model_input["city"] = user.city
+    model_input["exp_group"] = user.exp_group
+    model_input["gender"] = user.gender
+    model_input["os"] = user.os
+    model_input["source"] = user.source
+    model_input["month"] = time.month
+    model_input["year"] = time.year
+    model_input["hour"] = time.hour
+    model_input["exp_group"] = model_input["exp_group"].astype("O")
+    model_input["gender"] = model_input["gender"].astype("O")
+    
+    
+    # use model to get probabilities that
+    # user will like a particular post
+    pred = model.predict_proba(
+        model_input[model.feature_names_in_]
+    )[:,1]
+    
+    # getting ids of posts with biggest probabilities
+    posts = post_data.index[np.argsort(pred)[-limit:]]
+    
     return (
-        db.query(Post).
-        join(Feed).
-        filter(Feed.action == "like").
-        group_by(Post.id).
-        order_by(desc(func.count())).
-        limit(limit).
-        all()
+        post_data.loc[posts, ["topic", "text"]].
+        reset_index().apply(
+            lambda row: row.to_dict(), axis = 1
+        ).to_list()
     )
