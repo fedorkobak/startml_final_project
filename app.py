@@ -184,7 +184,7 @@ def get_recommendations(
     # use model to get probabilities that
     # user will like a particular post
     pred = model.predict_proba(
-        model_input[model.feature_names_in_]
+        model_input[model.feature_names_]
     )[:,1]
     
     # getting ids of posts with biggest probabilities
